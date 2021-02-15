@@ -5,6 +5,7 @@ const {
     prefix,
     token,
 } = require('./config.json');
+require('dotenv').config();
 
 // Create a new client
 const client = new Client();
@@ -55,4 +56,4 @@ client.on('message', async message => {
 });
 
 
-client.login(token);
+client.login(process.env.DISCORD_TOKEN);
