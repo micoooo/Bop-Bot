@@ -1,4 +1,7 @@
 const ytdl = require('ytdl-core');
+const axios = require('axios');
+const { validateURL } = require('ytdl-core');
+require('dotenv').config();
 
 module.exports = {
     name: 'play',
@@ -22,7 +25,22 @@ module.exports = {
                 );
             }
 
-            const songInfo = await ytdl.getInfo(args[1]);
+            var musicArg = (args.slice(1)).join(' ');
+            if (!validateURL(musicArg)) {
+                const videoId = await axios.get(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_DATA_API}&type=video&part=snippet&maxResults=10&q=${musicArg}`)
+                    .then((response) => {
+                        // console.log(response.data.items[0].id.videoId);
+                        return (response.data.items[0].id.videoId);
+                    }, (error) => {
+                        console.log(error);
+                    });
+
+                musicArg = `https://youtu.be/${videoId}`
+            }
+
+            console.log(musicArg);
+
+            const songInfo = await ytdl.getInfo(musicArg);
             const song = {
                 title: songInfo.videoDetails.title,
                 url: songInfo.videoDetails.video_url,
