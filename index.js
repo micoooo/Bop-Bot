@@ -3,7 +3,6 @@ const Discord = require('discord.js');
 const Client = require('./client/Client');
 const {
     prefix,
-    token,
 } = require('./config.json');
 require('dotenv').config();
 
