@@ -25,7 +25,7 @@ module.exports = {
                 );
             }
 
-            var musicArg = (args.slice(1)).join(' ');
+            let musicArg = (args.slice(1)).join(' ');
             if (!validateURL(musicArg)) {
                 const videoId = await axios.get(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_DATA_API}&type=video&part=snippet&maxResults=10&q=${musicArg}`)
                     .then((response) => {
@@ -35,7 +35,7 @@ module.exports = {
                         console.log(error);
                     });
 
-                musicArg = `https://youtu.be/${videoId}`
+                musicArg = `https://youtu.be/${videoId}`;
             }
 
             console.log(musicArg);
