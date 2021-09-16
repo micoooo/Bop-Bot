@@ -1,6 +1,7 @@
 const ytdl = require('ytdl-core');
 const axios = require('axios');
 const { validateURL } = require('ytdl-core');
+const { MessageEmbed } = require('discord.js');
 require('dotenv').config();
 
 module.exports = {
@@ -25,27 +26,6 @@ module.exports = {
                 );
             }
 
-            let musicArg = (args.slice(1)).join(' ');
-            if (!validateURL(musicArg)) {
-                const videoId = await axios.get(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_DATA_API}&type=video&part=snippet&maxResults=10&q=${musicArg}`)
-                    .then((response) => {
-                        // console.log(response.data.items[0].id.videoId);
-                        return (response.data.items[0].id.videoId);
-                    }, (error) => {
-                        console.log(error);
-                    });
-
-                musicArg = `https://youtu.be/${videoId}`;
-            }
-
-            console.log(musicArg);
-
-            const songInfo = await ytdl.getInfo(musicArg);
-            const song = {
-                title: songInfo.videoDetails.title,
-                url: songInfo.videoDetails.video_url,
-            };
-
             if (!serverQueue) {
                 const queueContruct = {
                     textChannel: message.channel,
@@ -58,10 +38,11 @@ module.exports = {
 
                 queue.set(message.guild.id, queueContruct);
 
-                queueContruct.songs.push(song);
-
                 try {
                     const connection = await voiceChannel.join();
+                    message.channel.send(`:thumbsup: **Joined \`${queueContruct.voiceChannel.name}\` :page_facing_up: And bound to \`${queueContruct.textChannel.name}\`**`);
+                    const song = await this.searchMusic(message, args);
+                    queueContruct.songs.push(song);
                     queueContruct.connection = connection;
                     this.play(message, queueContruct.songs[0]);
                 }
@@ -72,10 +53,26 @@ module.exports = {
                 }
             }
             else {
+                const song = await this.searchMusic(message, args);
                 serverQueue.songs.push(song);
-                return message.channel.send(
-                    `${song.title} has been added to the queue!`,
-                );
+                console.log(song.thumbnail);
+                const queueEmbed = new MessageEmbed()
+                    .setTitle(song.title)
+                    .setURL(song.url)
+                    .setAuthor('Added to queue', message.author.avatarURL())
+                    .setThumbnail(song.thumbnail)
+                    .addFields(
+                        { name: 'Channel', value: song.channel, inline: true },
+                        { name: 'Song Duration', value: song.duration, inline: true },
+                        { name: 'Estimated time until playing', value: song.duration, inline: true },
+                    )
+                    .addField('Position in queue', '1')
+                    .setFooter('\u3000'.repeat(100) + '|');
+
+                message.channel.send(queueEmbed);
+                // return message.channel.send(
+                //     `${song.title} has been added to the queue!`,
+                // );
             }
         }
         catch (error) {
@@ -103,6 +100,34 @@ module.exports = {
             })
             .on('error', error => console.error(error));
         dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
-        serverQueue.textChannel.send(`Start playing: **${song.title}**`);
+        serverQueue.textChannel.send(`**Playing** :notes: \`${song.title}\` - Now!`);
+    },
+
+    async searchMusic(message, args) {
+        let musicArg = (args.slice(1)).join(' ');
+        if (!validateURL(musicArg)) {
+            message.channel.send(`**Searching :mag_right: \`${musicArg}\`**`);
+            const videoId = await axios.get(`https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_DATA_API}&type=video&part=snippet&maxResults=10&q=${musicArg}`)
+                .then((response) => {
+                    // console.log(response.data.items[0].id.videoId);
+                    return (response.data.items[0].id.videoId);
+                }, (error) => {
+                    console.log(error);
+                });
+
+            musicArg = `https://youtu.be/${videoId}`;
+        }
+
+        console.log(musicArg);
+
+        const songInfo = await ytdl.getInfo(musicArg);
+        const song = {
+            title: songInfo.videoDetails.title,
+            url: songInfo.videoDetails.video_url,
+            channel: songInfo.videoDetails.ownerChannelName,
+            duration: songInfo.videoDetails.lengthSeconds,
+            thumbnail: songInfo.videoDetails.thumbnails[0].url,
+        };
+        return song;
     },
 };
